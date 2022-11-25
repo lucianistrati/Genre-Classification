@@ -1,0 +1,8 @@
+data/
+papers/
+Music-Genre-Classification-using-lyrics/
+predicting-song-music-genre/
+*.npy
+__pycache__/
+.idea/vcs.xml
+.idea/

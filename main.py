@@ -1,24 +1,34 @@
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
+from langdetect import detect
 from nltk.stem.snowball import SnowballStemmer
+from nltk.util import ngrams
 from nltk.corpus import stopwords
 from sklearn.svm import SVC
 from copy import deepcopy
 from typing import List
-import os, glob, requests, uuid, json, re, random, itertools, math
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pyphen
-import pronouncing
-from langdetect import detect
+from tqdm import tqdm
 
+import seaborn as sns
 import tensorflow as tf
 import pandas as pd
+import xgboost as xgb
 import numpy as np
 
+import pyphen
+import pronouncing
+import nltk
+import pdb
+import os
+import glob
+import requests
+import uuid
+import json
+import re
+import random
+import itertools
+import math
 import textract
 import spacy
 import nltk
@@ -33,6 +43,8 @@ def load_data():
 
     return train_df, test_df
 
+
+from gold_standard_linguistical_feature_extraction import get_paper_features
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -106,7 +118,7 @@ def remove_stopwords(words: List[str]):
     for word in words:
         if word in english_stopwords:
             words.remove(word)
-            print(f"{word} is stopword!")
+            # print(f"{word} is stopword!")
     return words
 
 
@@ -144,8 +156,12 @@ def get_words_from_text(text: str):
     :param text:
     :return:
     """
-    return nltk.tokenize.word_tokenize(text)
-
+    # try:
+    return text.split()
+    # return nltk.tokenize.word_tokenize(text)
+    # except:
+    #     print(text, len(text))
+    #     pdb.set_trace()
 
 def read_list_of_common_abbreviations():
     path = "common_abbreviations_ro.txt"
@@ -236,7 +252,7 @@ def abbreviate(word: str, option: str = "stemming", do_abbreviate: bool = False)
     words = [word]
     if word in abbrev_dict.keys():
         meaning = abbrev_dict[word]
-        print(f"{word} stands for {meaning}")
+        # print(f"{word} stands for {meaning}")
         words = get_words_from_text(meaning)
         words = normalize_words(words, do_abbreviate=do_abbreviate, option=option)
     return words
@@ -345,14 +361,18 @@ def find_rhythm(text: str):
     pass
 
 
+from sentence_transformers import SentenceTransformer
+emb_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+
 def embed_text(text: str):
     """
 
     :param text:
     :return:
     """
-    pass
-
+    emb = emb_model.encode([text])
+    return np.reshape(emb, (emb.shape[1]))
 
 
 # TODO REMOVE MATEI-BEJAN
@@ -475,18 +495,69 @@ Don’t overfit (report results on (cross)validation and test) XXXX
 """
 
 
+def extract_ngrams(data, num):
+    n_grams = ngrams(nltk.word_tokenize(data), num)
+    return [' '.join(grams) for grams in n_grams]
+
+
 def get_n_grams(text: str, n: int = 2, analyzer: str = "word"):
-    pass
+    return extract_ngrams(text, n)
 
 
-def get_bi_grams(text: str):
+def get_bi_grams(text: str, analyzer: str = "word"):
     return get_n_grams(text, 2)
 
 
-def get_tri_grams(text: str):
+def get_tri_grams(text: str, analyzer: str = "word"):
     return get_n_grams(text, 3)
 
+
+def text_similarity(text_1: str, text_2: str):
+    return random.random()
+
+
+def label_text_by_similarity(text, labels_list):
+    sims = [text_similarity(text, label) for label in labels_list]
+    highest_sim = max(sims)
+    highest_index = sims.index(highest_sim)
+    return labels_list[highest_index]
+
+
+def get_features(text: str):
+    return len(text)
+
+
+from statistics import mean
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+
+def scale(train_data, val_data, test_data, option="standard"):
+    if option == "standard":
+        scaler = StandardScaler(with_mean=False)
+    elif option == "minmax":
+        scaler = MinMaxScaler()
+    else:
+        raise Exception("Wrong scaling option!")
+    # print(type(train_data))
+    #
+    # print(train_data.shape, val_data.shape, test_data.shape)
+
+    train_data = scaler.fit_transform(train_data)
+    val_data = scaler.transform(val_data)
+    test_data = scaler.transform(test_data)
+    return train_data, val_data, test_data
+
+
+def average_word_len(words: List[str]):
+    return mean([len(word) for word in words])
+
+
 def main():
+    use_val_set = False
+    use_text_embedding = False
+    use_paper_features = True
+    use_loaded_data = True
+
     do_abbreviate = True
     do_remove_stopwords = True
     do_get_words_root = True
@@ -497,11 +568,12 @@ def main():
     words = normalize_words(words=words, text=text, do_abbreviate=do_abbreviate, do_remove_stopwords=do_remove_stopwords,
                             do_get_words_root=do_get_words_root, do_lowercase=do_lowercase,
                             do_regex_cleaning=do_regex_cleaning)
-    print(words)
     all_labels = ['Metal', 'Hip-Hop', 'Country', 'Jazz', 'Electronic', 'Pop', 'Folk', 'Rock', 'R&B', 'Indie']
 
     analyzer = ["word", "character"][0]
-    model_option = ["cv", "tfidf"][0]
+    model_option = ["cv", "tfidf"][1]
+    print("model_option: ", model_option)
+    print("analyzer: ", analyzer)
     train_df, test_df = load_data()
     cv = CountVectorizer(analyzer=analyzer)
     tfidf = TfidfVectorizer(analyzer=analyzer)
@@ -519,6 +591,41 @@ def main():
     X_train = train_df["Lyrics"].to_list()
     X_test = test_df["Lyrics"].to_list()
 
+    if use_text_embedding:
+        if use_loaded_data:
+            X_train = np.load(file="X_train_embed_text_default.npy", allow_pickle=True)
+            X_test = np.load(file="X_test_embed_text_default.npy", allow_pickle=True)
+        else:
+            X_train = np.array([embed_text(text) for text in tqdm(X_train)])
+            X_test = np.array([embed_text(text) for text in tqdm(X_test)])
+            np.save(arr=X_train, file="X_train_embed_text_default.npy", allow_pickle=True)
+            np.save(arr=X_test, file="X_test_embed_text_default.npy", allow_pickle=True)
+    else:
+        if use_paper_features:
+            if use_loaded_data:
+                X_train = np.load(file="X_train_paper_features.npy", allow_pickle=True)
+                X_test = np.load(file="X_test_paper_features.npy", allow_pickle=True)
+                X_train = np.array([X[0] for X in tqdm(X_train)])
+                X_test = np.array([X[0] for X in tqdm(X_test)])
+            else:
+                nlp = spacy.load("en_core_web_sm")
+                print("paper_features")
+                X_train = np.array([get_paper_features(text=text, nlp=nlp)[0] for text in tqdm(X_train)])
+                X_test = np.array([get_paper_features(text=text, nlp=nlp)[0] for text in tqdm(X_test)])
+                np.save(arr=X_train, file="X_train_paper_features.npy", allow_pickle=True)
+                np.save(arr=X_test, file="X_test_paper_features.npy", allow_pickle=True)
+        # X_train = [" ".join(normalize_words(words=get_words_from_text(text), text=text, do_abbreviate=do_abbreviate,
+        #                                     do_remove_stopwords=do_remove_stopwords,
+        #                                     do_get_words_root=do_get_words_root, do_lowercase=do_lowercase,
+        #                                     do_regex_cleaning=do_regex_cleaning)) for text in X_train]
+        #
+        # X_test = [" ".join(normalize_words(words=get_words_from_text(text), text=text, do_abbreviate=do_abbreviate,
+        #                                    do_remove_stopwords=do_remove_stopwords,
+        #                                    do_get_words_root=do_get_words_root, do_lowercase=do_lowercase,
+        #                                    do_regex_cleaning=do_regex_cleaning)) for text in X_test]
+
+    # print(X_train.shape, X_test.shape)
+
     y_train = train_df["Genre"].to_list()
     y_test = test_df["Genre"].to_list()
 
@@ -531,25 +638,41 @@ def main():
     y_train = [labels_dict[y] for y in y_train]
     y_test = [labels_dict[y] for y in y_test]
 
+    y_train = np.array(y_train).reshape(-1, 1)
+    y_test = np.array(y_test).reshape(-1, 1)
+
+    # y_train, y_test, y_test = scale(y_train, y_test, y_test)
+
     # print(X_train[0])
     # print(X_train[0].find("\n"))
 
-    val_size = 0.2
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=val_size)
+    if use_val_set:
+        val_size = 0.2
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=val_size)
 
-    X_train = vectorizer.fit_transform(X_train)
-    X_val = vectorizer.transform(X_val)
-    X_test = vectorizer.transform(X_test)
+    if use_text_embedding is False:
+        if use_paper_features is False:
+            X_train = vectorizer.fit_transform(X_train)
+            if use_val_set:
+                X_val = vectorizer.transform(X_val)
+            X_test = vectorizer.transform(X_test)
+
+    # X_train, X_val, X_test = scale(X_train, X_val, X_test)
 
     f1_average = "weighted"
-    model = SVC()
+    # model = SVC()  # class_weight="balanced")
+    model = xgb.XGBClassifier()
+
+    print(X_train[0], y_train.shape)
+
     model.fit(X_train, y_train)
 
-    y_pred = model.predict(X_val)
-    print("Validation F1 with BOW and SVC: ", f1_score(y_pred, y_val, average=f1_average))
+    if use_val_set:
+        y_pred = model.predict(X_val)
+        print("Validation F1 with tfidf and SVC: ", f1_score(y_pred, y_val, average=f1_average))
 
     y_pred = model.predict(X_test)
-    print("Test F1 with BOW and SVC: ", f1_score(y_pred, y_test, average=f1_average))
+    print("Test F1 with tfidf and SVC: ", f1_score(y_pred, y_test, average=f1_average))
 
 
 if __name__ == "__main__":
