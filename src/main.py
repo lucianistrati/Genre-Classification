@@ -164,7 +164,7 @@ def get_words_from_text(text: str):
     #     pdb.set_trace()
 
 def read_list_of_common_abbreviations():
-    path = "common_abbreviations_ro.txt"
+    path = "data/common_abbreviations_ro.txt"
     abbrev_dict_ = {}
     with open(path, "r") as f:
         lines = f.readlines()
