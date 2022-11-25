@@ -1,3 +1,13 @@
+Dataset description 
+
+The dataset contains roughly 18.000 songs in the training set and 8.000 songs in the testing set.
+
+Task description 
+
+The task is to classifiy each melody into a specific genre based on the given lyrics
+
+Experiments Results
+
 No preprocessing 
 Validation F1 with BOW and SVC:  0.4368582938573465
 Test F1 with BOW and SVC:  0.4300792043340485
