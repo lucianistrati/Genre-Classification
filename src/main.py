@@ -1069,9 +1069,14 @@ def main():
     sentences = X_train + X_test
     labels = y_train + y_test
 
-    train_bert_for_seq_classif(sentences, labels)
+    # train_bert_for_seq_classif(sentences, labels)
 
-    a = 1/0
+    # a = 1/0
+
+    do_words_normalization = True
+
+    if do_words_normalization is True:
+        use_paper_features = False
 
     y_train = np.array(y_train).reshape(-1, 1)
     y_test = np.array(y_test).reshape(-1, 1)
@@ -1099,15 +1104,18 @@ def main():
                 X_test = np.array([get_paper_features(text=text, nlp=nlp)[0] for text in tqdm(X_test)])
                 np.save(arr=X_train, file="data/X_train_paper_features.npy", allow_pickle=True)
                 np.save(arr=X_test, file="data/X_test_paper_features.npy", allow_pickle=True)
-        # X_train = [" ".join(normalize_words(words=get_words_from_text(text), text=text, do_abbreviate=do_abbreviate,
-        #                                     do_remove_stopwords=do_remove_stopwords,
-        #                                     do_get_words_root=do_get_words_root, do_lowercase=do_lowercase,
-        #                                     do_regex_cleaning=do_regex_cleaning)) for text in X_train]
-        #
-        # X_test = [" ".join(normalize_words(words=get_words_from_text(text), text=text, do_abbreviate=do_abbreviate,
-        #                                    do_remove_stopwords=do_remove_stopwords,
-        #                                    do_get_words_root=do_get_words_root, do_lowercase=do_lowercase,
-        #                                    do_regex_cleaning=do_regex_cleaning)) for text in X_test]
+        else:
+            if do_words_normalization:
+                print("words normalization...")
+                X_train = [" ".join(normalize_words(words=get_words_from_text(text), text=text, do_abbreviate=do_abbreviate,
+                                                    do_remove_stopwords=do_remove_stopwords,
+                                                    do_get_words_root=do_get_words_root, do_lowercase=do_lowercase,
+                                                    do_regex_cleaning=do_regex_cleaning)) for text in X_train]
+
+                X_test = [" ".join(normalize_words(words=get_words_from_text(text), text=text, do_abbreviate=do_abbreviate,
+                                                   do_remove_stopwords=do_remove_stopwords,
+                                                   do_get_words_root=do_get_words_root, do_lowercase=do_lowercase,
+                                                   do_regex_cleaning=do_regex_cleaning)) for text in X_test]
 
     # print(X_train.shape, X_test.shape)
 

@@ -1,4 +1,9 @@
+these ideas are from the course (teacher)
+
 Try different features: content words (BOW, word embeddings), stylistic markers (stop words), rhyme, rhythm, etc.
+
 Try different learning algorithm
+
 Find good combinations
+
 Don’t overfit (report results on (cross)validation and test)

@@ -57,7 +57,7 @@ ALL_LINGUISTICAL_FEATURES_NAMES = ["get_sws_pct", "count_sws", "get_dots_pct", "
 # ALL_LANGUAGES = set(list(np.load(file="data/multilang_utils/massive_all_4749_languages.npy", allow_pickle=True)))
 
 
-def load_all_stopwords(lang: str, nlp: spacy.lang = None):
+def load_all_stopwords(lang: str, nlp = None):
     if nlp is None:
         nlp = spacy.load("en_core_web_sm")
     all_stopwords = set(list(nlp.Defaults.stop_words))

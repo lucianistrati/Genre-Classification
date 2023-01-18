@@ -1,3 +1,6 @@
+Genre Classification 2nd Project Text Mining
+Lucian Istrati - Group 511
+
 Dataset description 
 
 The dataset contains roughly 18.000 songs in the training set and 8.000 songs in the testing set.
@@ -39,3 +42,9 @@ Test F1 with sent_transf and XGB:  0.4040942523434254
 
 difficulty features
 Test F1 with tfidf and SVC:  0.3386425540725486
+
+
+Conclusions 
+
+To sum up, different approaches were tried and out of all
+Future developments
