@@ -1,5 +1,13 @@
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from src.gold_standard_linguistical_feature_extraction import get_paper_features
 from sklearn.model_selection import train_test_split
+from typing import Dict, List, Set, Tuple, Optional, Any, Callable, NoReturn, Union, Mapping, Sequence, Iterable
+from gensim.test.utils import common_texts
+from sklearn.metrics.pairwise import cosine_similarity
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from gensim.models import Word2Vec
+from nltk.corpus import stopwords
 from sklearn.metrics import f1_score
 from langdetect import detect
 from nltk.stem.snowball import SnowballStemmer
@@ -9,7 +17,17 @@ from sklearn.svm import SVC
 from copy import deepcopy
 from typing import List
 from tqdm import tqdm
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import BernoulliNB, MultinomialNB
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.linear_model import Perceptron
+from xgboost import XGBClassifier
 
+
+import matplotlib.pyplot as plt
 import seaborn as sns
 import tensorflow as tf
 import pandas as pd
@@ -17,11 +35,17 @@ import xgboost as xgb
 import numpy as np
 
 import pyphen
+import multiprocessing
+import nltk
+import pdb
 import pronouncing
 import nltk
 import pdb
-import os
 import glob
+import fasttext
+import spacy
+import csv
+import os
 import requests
 import uuid
 import json
@@ -44,9 +68,166 @@ def load_data():
     return train_df, test_df
 
 
-from gold_standard_linguistical_feature_extraction import get_paper_features
-
 nlp = spacy.load("en_core_web_sm")
+all_stop_words = spacy.lang.en.stop_words.STOP_WORDS
+
+SAVING_FOLDER = "data/"
+
+def create_df_from_arrays(X, Y, saving_filename):
+    dict_df = {"text": [], "label": []}
+
+    for (x, y) in list(zip(X, Y)):
+        dict_df['text'].append(x)
+        dict_df['label'].append(y)
+
+    df = pd.DataFrame.from_dict(dict_df)
+
+    df.to_csv(saving_filename)
+
+
+def preprocess(X, preprocessing_method=""):
+    if preprocessing_method == "":
+        return X
+    for i in range(len(X)):
+        preprocessed_x = []
+        doc = nlp(str(X[i]))
+        for token in doc:
+            if preprocessing_method == "STOPWORDS_ELIM":
+                if token.text.lower() not in all_stop_words:
+                    preprocessed_x.append(token.text)
+            elif preprocessing_method == "PART_OF_SPEECH":
+                preprocessed_x.append(token.text + "_" + token.dep_)
+            elif preprocessing_method == "DEPENDENCY":
+                preprocessed_x.append(token.text + "_" + token.dep_)
+
+        X[i] = " ".join(preprocessed_x)
+
+    return np.array(X)
+
+
+def baseline_models(X_train, y_train, X_test, y_test, subject_feature=False):
+    models = [BernoulliNB(), MultinomialNB(), Perceptron(),
+              AdaBoostClassifier(), RandomForestClassifier(),
+              DecisionTreeClassifier(), XGBClassifier()]
+    models_names = ["BernoulliNB()", "MultinomialNB()",
+                    "Perceptron()", "AdaBoostClassifier()",
+                    "RandomForestClassifier()",
+                    "DecisionTreeClassifier()", "XGBClassifier()"]
+
+
+    if subject_feature:
+        create_df_from_arrays(X_train, y_train, "data/bert_train.csv")
+        create_df_from_arrays(X_test, y_test, "data/bert_test.csv")
+        X_train = preprocess(X_train)
+        X_test = preprocess(X_test)
+        cv = CountVectorizer()
+        X_train = cv.fit_transform(X_train)
+        X_test = cv.transform(X_test)
+
+
+    for (model, model_name) in list(zip(models, models_names)):
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+
+        print("*" * 10)
+        print(model_name)
+        print("ACC: ", accuracy_score(y_pred, y_test))
+        print("F1: ", f1_score(y_pred, y_test, average="weighted"))
+
+
+def load_tokenizer():
+    """
+    :return:
+    """
+    return BertTokenizer.from_pretrained('bert-base-uncased')
+
+tokenizer = load_tokenizer()
+
+# @profile
+def load_model():
+    """
+    :return:
+    """
+    return BertModel.from_pretrained("bert-base-uncased")
+
+model = load_model()
+def embed_text(text: str, model: Any, tokenizer: Any, vectorization_method: str = "transformer"):
+    """
+    :param text:
+    :param model:
+    :param tokenizer:
+    :param vectorization_method:
+    :return:
+    """
+    # print(type(text))
+    max_len = 512
+    encoded_input = tokenizer(text, return_tensors='pt')
+    encoded_input["input_ids"] = encoded_input["input_ids"][:, :max_len]
+    encoded_input["token_type_ids"] = encoded_input["token_type_ids"][:, :max_len]
+    encoded_input["attention_mask"] = encoded_input["attention_mask"][:, :max_len]
+    output = model(**encoded_input)
+    # print(output["pooler_output"].shape)
+    return output["pooler_output"].detach().numpy()
+
+def save_data(df, train_size, target_column, content_column):
+    for i in range(len(df)):
+        df.at[i, target_column] = '__label__' + df.iloc[i][
+            target_column].replace(" ", "_")
+
+    df = df[[target_column, content_column]]
+    # the column order needs to be changed for processing with the FastText
+    # model
+    df = df.reindex(columns=[target_column, content_column])
+
+    df[:int(train_size * len(df))].to_csv(
+        os.path.join(SAVING_FOLDER, "train.txt"),
+        index=False,
+        sep=' ',
+        header=False,
+        quoting=csv.QUOTE_NONE,
+        quotechar="",
+        escapechar=" ")
+
+    df[int(train_size * len(df)):].to_csv(
+        os.path.join(SAVING_FOLDER, "test.txt"),
+        index=False,
+        sep=' ',
+        header=False,
+        quoting=csv.QUOTE_NONE,
+        quotechar="",
+        escapechar=" ")
+
+def train_fasttext_model(train_size, test_size):
+    model = fasttext.train_supervised(input=os.path.join("data",
+                                                         "train.txt"),
+                                      autotuneValidationFile="data/test.txt")
+    model.save_model(
+        "model_news_" +
+        str(train_size) +
+        "-" +
+        str(test_size) +
+        ".bin")
+    return model
+
+def train_fasttext(df, target_column, content_column):
+    model_name = "Fasttext Model"
+    train_size = 0.8
+    test_size = 0.2
+    save_data(df, train_size, target_column, content_column)
+    # trains the fast-text model on the first (train_size * 100) % of the data
+    model = train_fasttext_model(train_size, test_size)
+    # tests the fast-text model accuracy on the last ((train_size -
+    # test-size) * 100) % of the data
+
+
+def fasttext_model():
+    try:
+        os.mkdir("data")
+    except FileExistsError:
+        pass
+    df = pd.read_csv("data/data.csv")
+    train_fasttext(df, "label", "text")
+
 
 
 def read_docx(filepath: str):
@@ -449,6 +630,27 @@ def compute_no_of_rhymes(test_str):
     return times_rhymes
 
 
+
+def document_preprocess(document):
+    """
+    :param document:
+    :return:
+    """
+    return word_tokenize(document)
+
+
+def train_word2vec_bow(texts):
+    texts = [document_preprocess(text) for text in texts]
+
+    print(multiprocessing.cpu_count())
+
+    print(texts[0])
+    print(texts[-1])
+    model = Word2Vec(sentences=texts, vector_size=300, window=5, min_count=1, workers=multiprocessing.cpu_count())
+    model.save("checkpoints/word2vec.model")  # checkpoint is saved
+    print("Saved word2vec model")
+
+
 # TODO REMOVE MATEI-BEJAN
 def extract_lyrics_metadata(df, as_df=True):
     lyrics_metadata_dict = {'Genre': [], 'Avg_Syllables': [],
@@ -508,6 +710,18 @@ def get_n_grams(text: str, n: int = 2, analyzer: str = "word"):
 
 def get_bi_grams(text: str, analyzer: str = "word"):
     return get_n_grams(text, 2)
+
+
+genres = {'Folk', 'Indie', 'Rock', 'Hip-Hop', 'R&B', 'Country', 'Metal', 'Pop', 'Jazz', 'Electronic'}
+
+
+def train_by_text_similarity():
+    # idea 1 similarity of test lyrics with train lyrics for a certain category
+    # idea 2 similarity of the class labels with the lyrics
+    text_emb = embed_text("", model, tokenizer)
+    avg_content_emb = embed_text("", model, tokenizer)
+    similarities = cosine_similarity(text_emb, avg_content_emb)
+
 
 
 def get_tri_grams(text: str, analyzer: str = "word"):
@@ -1068,6 +1282,15 @@ def main():
 
     sentences = X_train + X_test
     labels = y_train + y_test
+
+
+    train_word2vec_bow(sentences)
+
+    baseline_models(X_train, y_train, X_test, y_test, subject_feature=False)
+    save_data(df, train_size, target_column, content_column)
+    train_fasttext_model(train_size, test_size)
+    train_fasttext(df, target_column, content_column)
+    fasttext_model()
 
     # train_bert_for_seq_classif(sentences, labels)
 

@@ -1,6 +1,7 @@
 these ideas are from the course (teacher)
 
-Try different features: content words (BOW, word embeddings), stylistic markers (stop words), rhyme, rhythm, etc.
+Try different features: content words (BOW, word embeddings),
+stylistic markers (stop words), rhyme, rhythm, etc.
 
 Try different learning algorithm
 

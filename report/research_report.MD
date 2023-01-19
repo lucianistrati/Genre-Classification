@@ -9,6 +9,25 @@ Task description
 
 The task is to classifiy each melody into a specific genre based on the given lyrics
 
+Labels Distribution
+
+Barcharts exhitibiting this, TODO 
+
+Possible architectures maybe TODO 
+
+
+Genres:
+- Folk
+- Indie
+- Rock
+- Hip-Hop
+- R&B
+- Country
+- Metal
+- Pop
+- Jazz
+- Electronic
+
 Experiments Results
 
 No preprocessing 
@@ -43,8 +62,14 @@ Test F1 with sent_transf and XGB:  0.4040942523434254
 difficulty features
 Test F1 with tfidf and SVC:  0.3386425540725486
 
+Insert table with all the results 
 
 Conclusions 
 
 To sum up, different approaches were tried and out of all
-Future developments
+
+Future works and developments
+
+Some other things that could be tried out are:
+
+References and bibliography
