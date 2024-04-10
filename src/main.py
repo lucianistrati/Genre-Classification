@@ -1,5 +1,5 @@
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from src.gold_standard_linguistical_feature_extraction import get_paper_features
+from src.linguistical_feature_extraction import get_paper_features
 from sklearn.model_selection import train_test_split
 from typing import Dict, List, Set, Tuple, Optional, Any, Callable, NoReturn, Union, Mapping, Sequence, Iterable
 from gensim.test.utils import common_texts
