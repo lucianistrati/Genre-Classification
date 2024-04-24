@@ -37,47 +37,45 @@ The task is to classifiy each melody into a specific genre based on the given ly
 - Electronic
 
 ## Experiments Results
+- No preprocessing
+  - Validation F1 with BOW and SVC:  0.43
+  - Test F1 with BOW and SVC:  0.43
 
-No preprocessing 
-Validation F1 with BOW and SVC:  0.43
-Test F1 with BOW and SVC:  0.43
+- Standard scaling, class weights
+  - Validation F1 with BOW and SVC:  0.28
+  - Test F1 with BOW and SVC:  0.29
 
-Standard scaling, class weights
-Validation F1 with BOW and SVC:  0.28
-Test F1 with BOW and SVC:  0.29
+- No more scaling, class weights
+  - Validation F1 with BOW and SVC:  0.37
+  - Test F1 with BOW and SVC:  0.37
 
-No more scaling, class weights
-Validation F1 with BOW and SVC:  0.37
-Test F1 with BOW and SVC:  0.37
+- No more scaling, class weights
+  - Validation F1 with tfidf and SVC:  0.39
+  - Test F1 with tfidf and SVC:  0.40
 
-No more scaling, class weights
-Validation F1 with tfidf and SVC:  0.39
-Test F1 with tfidf and SVC:  0.40
+- Xgboost
+  - Validation F1 with tfidf and SVC:  0.42
+  - Test F1 with tfidf and SVC:  0.41
 
-Xgboost
-Validation F1 with tfidf and SVC:  0.42
-Test F1 with tfidf and SVC:  0.41
+- SentenceTrasnformer 'all-MiniLM-L6-v2'
+  - Validation F1 with sent_transf and XGB:  0.41
+  - Test F1 with sent_transf and XGB:  0.40
 
+- Text difficulty features and Xgboost model
+  - Validation F1 with tfidf and SVC:  0.33
+  - Test F1 with tfidf and SVC:  0.33
 
-SentenceTrasnformer 'all-MiniLM-L6-v2'
-Validation F1 with sent_transf and XGB:  0.41
-Test F1 with sent_transf and XGB:  0.40
+- Fasttext model
+  - Train F1 with tfidf and SVC:  0.37
+  - Test F1 with tfidf and SVC:  0.36
 
-Text difficulty features and Xgboost model
-Validation F1 with tfidf and SVC:  0.33
-Test F1 with tfidf and SVC:  0.33
+- Word2vec embeddings with SVC model over them
+  - Train F1 with word2vec embeddings and SVC:  0.34
+  - Test F1 with word2vec embeddings and SVC:  0.33
 
-Fasttext model
-Train F1 with tfidf and SVC:  0.37
-Test F1 with tfidf and SVC:  0.36
-
-Word2vec embeddings with SVC model over them
-Train F1 with word2vec embeddings and SVC:  0.34
-Test F1 with word2vec embeddings and SVC:  0.33
-
-Text similarity knn like model (calculate average embedding for lyrics that have one label in train, a centroid of the embeddings of all lyrics belonging to that class, followed by determining most similar sentence transformer embedding of the test from the text set to the averages of all texts from the train set that belong to a single table)
-Train F1 with tfidf and SVC:  0.37
-Test F1 with tfidf and SVC:  0.36
+- Text similarity knn like model (calculate average embedding for lyrics that have one label in train, a centroid of the embeddings of all lyrics belonging to that class, followed by determining most similar sentence transformer embedding of the test from the text set to the averages of all texts from the train set that belong to a single table)
+  - Train F1 with tfidf and SVC:  0.37
+  - Test F1 with tfidf and SVC:  0.36
 
 ## Conclusions 
 
