@@ -100,4 +100,3 @@ Lastly, definitely vanilla ANNs, CNNs and LSTMs architectures could be tried out
 - https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
 - https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_validate.html
   
-[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://stand-with-ukraine.pp.ua)
